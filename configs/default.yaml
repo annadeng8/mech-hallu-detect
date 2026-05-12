@@ -1,0 +1,39 @@
+model_name: "meta-llama/Llama-3.1-8B-Instruct"
+max_new_tokens: 40
+device: "mps"
+
+# Layer indices for internal probes
+layers:
+  tsv_layer: 22        # Shifted to mid-late for better truth signal
+  sae_layer: 19        # Shifted to mid for better feature learning
+  dola_candidates: [4, 8, 12, 16, 20, 24, 28]
+
+# Triage thresholds based on your Accuracy/AUC
+thresholds:
+  tau1: 0.25          # Below this: Tier 1 (Greedy)
+  tau2: 0.70           # Below this: Tier 2 (DoLa); Above: Tier 3 (Resample)
+
+# Risk formula: w1*(1-LB) + w2*TSV + w3*SAE
+weights:
+  w1: 0.2              # Increased weight for Lookback (Attention groundedness)
+  w2: 0.45              # TSV Conflict
+  w3: 0.15              # SAE Feature activation
+
+# Decoding parameters
+sampling:
+  temperature: 0.7
+  top_p: 0.95
+  dola_alpha: 0.1      # Added: The strength of the DoLa contrast
+
+resampling:
+  k: 5                 # Number of candidates to consider in Tier 3
+  penalty_weight: 0.5     # How much to penalize tokens that triggered DoLa
+
+sae:
+  n_features: 1024     # Increased: 256 is usually too small for 4096-dim hidden states
+  l1_lambda: 0.0001    # Adjusted for better sparsity
+
+training:
+  batch_size: 8
+  epochs: 20           # Increased: SAEs need more iterations to converge
+  lr: 0.0001           # Written as a decimal to avoid YAML string parsing errors
